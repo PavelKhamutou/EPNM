@@ -2,7 +2,6 @@
 
 Problem  LFAT5
 
-
 ```
 G =
 
