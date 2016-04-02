@@ -3,6 +3,7 @@
 Problem  LFAT5
 
 
+```
 G =
 
    (1,1)        1.570880000000000e+00
@@ -53,7 +54,8 @@ G =
   (14,14)       1.570880000000000e+00
 
 
-Task:
+### Task:
+
 1. Write C program, which will realise the the matrix/vector
    multiplication G*b with G formed as the full matrix (without
    exploiting the sparsity) in two versions:
@@ -61,6 +63,7 @@ Task:
    b) using the broadcasting technique in the OpenMPI
       environment. Take vector b constructed as follows:
       b = [ 1, 2, 1, 2, ... , 1, 2, 1, 2 ]^T
+
 2. Write C program, which will realise the the matrix/vector
    multiplication G*b with G formed expoliting the sparsity in
    two versions:
@@ -68,4 +71,5 @@ Task:
    b) using the broadcasting technique in the OpenMPI
       environment. Take vector b constructed as follows:
       b = [ 1, 2, 1, 2, ... , 1, 2, 1, 2 ]^T
+
 3. Compare execution times for all four versions.
