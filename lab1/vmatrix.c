@@ -27,11 +27,11 @@ void print_vector(int v[SIZE]) {
 	printf("|");
 }
 
-void print_vector_long(long v[SIZE]) {
+void print_vector_long(int v[SIZE]) {
 	int i = 0;
 	printf("\n\t| ");
 	for (i = 0; i < SIZE; i++) {
-		printf("%2ld ", v[i]);
+		printf("%2d ", v[i]);
 	}
 	printf("|");
 }
@@ -55,6 +55,14 @@ void fill_vector(int v[SIZE]) {
 	}
 }
 
+int multiple_row_by_vector(int row[SIZE], int v[SIZE]) {
+	int result = 0;
+	int i;
+	for (i = 0; i < SIZE; i++) {
+		result += row[i] * v[i];
+	}
+	return result;
+}
 
 
 int main(int argc, char *argv[]) {
@@ -82,51 +90,19 @@ int main(int argc, char *argv[]) {
 		fill_vector(VECTOR);
 	}
 
-	/*
-	 * int MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
-	 * buffer		Starting address of buffer (choice).
-	 * count		Number of entries in buffer (integer).
-	 * datatype		Data type of buffer (handle).
-	 * root			Rank of broadcast root (integer).
-	 * comm			Communicator (handle).
-	 */
+	int result[row_per_process];
+	int rows[SIZE][row_per_process];
+	MPI_Bcast (VECTOR, SIZE, MPI_INT, root, MPI_COMM_WORLD);
 
-	MPI_Bcast (&VECTOR, SIZE, MPI_INT, root, MPI_COMM_WORLD);
-
-	/*
-	 * int MPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm)
-	 * sendbuf		Address of send buffer (choice, significant only at root).
-	 * sendcount	Number of elements sent to each process (integer, significant only at root).
-	 * sendtype		Datatype of send buffer elements (handle, significant only at root).
-	 * recvcount	Number of elements in receive buffer (integer).
-	 * recvtype		Datatype of receive buffer elements (handle).
-	 * root			Rank of sending process (integer). 
-	 * comm			Communicator (handle). 
-	 */
-
-	MPI_Scatter (MATRIX, SIZE * row_per_process, MPI_INT, MATRIX[from], SIZE * row_per_process, MPI_INT, root, MPI_COMM_WORLD);
+	MPI_Scatter (MATRIX, SIZE * row_per_process, MPI_INT, rows, SIZE * row_per_process, MPI_INT, root, MPI_COMM_WORLD);
 	   
 	printf("computing slice %d (from row %d to %d)\n", myrank, from, to-1);
 
-	for (i = from; i < to; i++) {
-		RESULT[i] = 0;
-		for (k = 0; k < SIZE; k++) {
-			RESULT[i] += MATRIX[i][k] * VECTOR[k];
-		}
+	for (i = 0; i < row_per_process; i++) {
+		result[i] = multiple_row_by_vector(rows[i], VECTOR);
 	}
 			 
-	/*
-	 * int MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm)
-	 * sendbuf		Starting address of send buffer (choice).
-	 * sendcount	Number of elements in send buffer (integer).
-	 * sendtype		Datatype of send buffer elements (handle).
-	 * recvcount	Number of elements for any single receive (integer, significant only at root).
-	 * recvtype		Datatype of recvbuffer elements (handle, significant only at root).
-	 * root			Rank of receiving process (integer). 
-	 * comm			Communicator (handle). 
-	 */
-	long result[row_per_process];
-	MPI_Gather (&result, row_per_process, MPI_LONG, RESULT, row_per_process, MPI_LONG, root, MPI_COMM_WORLD);
+	MPI_Gather (result, row_per_process, MPI_INT, RESULT, row_per_process, MPI_INT, root, MPI_COMM_WORLD);
 	   
 	if (myrank == 0) {
 		printf("\n\n");
