@@ -1,0 +1,5 @@
+#!/bin/bash
+rm test 
+mpicc -o test vmatrix.c
+mpiexec -n $1 ./test
+

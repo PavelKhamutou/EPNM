@@ -3,9 +3,9 @@
 
 #define SIZE 8
 
-//int MATRIX[SIZE][SIZE];
-//int VECTOR[SIZE];
-int A[SIZE][SIZE], B[SIZE][SIZE], C[SIZE][SIZE];
+int MATRIX[SIZE][SIZE];
+int VECTOR[SIZE];
+int RESULT[SIZE];
 
 void print_matrix(int m[SIZE][SIZE]) { 
 	int i, j = 0;
@@ -18,12 +18,31 @@ void print_matrix(int m[SIZE][SIZE]) {
 	}
 }
 
+void print_vector(int v[SIZE]) {
+	int i = 0;
+	printf("\n\t| ");
+	for (i = 0; i < SIZE; i++) {
+		printf("%2d ", v[i]);
+	}
+	printf("|");
+}
+
+void print_vector_long(long v[SIZE]) {
+	int i = 0;
+	printf("\n\t| ");
+	for (i = 0; i < SIZE; i++) {
+		printf("%2ld ", v[i]);
+	}
+	printf("|");
+}
+
 void fill_matrix(int m[SIZE][SIZE]) {
-	static int n = 0;
+	int n = 1;
 	int i, j;
 	for (i = 0; i < SIZE; i++) {
 		for (j = 0; j < SIZE; j++) {
-			m[i][j] = n++;
+			//m[i][j] = n++;
+			m[i][j] = n;
 		}
 	}
 }
@@ -41,20 +60,26 @@ void fill_vector(int v[SIZE]) {
 int main(int argc, char *argv[]) {
 	int myrank, P, from, to, i, j, k;
 	int tag = 666;								/* any value will do */
+	int root = 0;
 	MPI_Status status;
-	   
 	MPI_Init (&argc, &argv);
-	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);		/* who am i */
 	MPI_Comm_size(MPI_COMM_WORLD, &P);			/* number of processors */
 
-	from = myrank * SIZE / P;
-	to = (myrank + 1) * SIZE / P;
+	if (SIZE % P != 0) {
+	    if (myrank == root) 
+			printf("Matrix size not divisible by number of processors\n");
+		MPI_Abort(MPI_COMM_WORLD, -1);
+	}
 
-	if (myrank == 0) {
-		fill_matrix(A);
-		fill_matrix(B);
-		//fill_matric(MATRIX);
-		//fill_vector(VECTOR);
+	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);		/* who am i */
+
+	int row_per_process = SIZE / P;
+	from = myrank * row_per_process;
+	to = (myrank + 1) * row_per_process;
+
+	if (myrank == root) {
+		fill_matrix(MATRIX);
+		fill_vector(VECTOR);
 	}
 
 	/*
@@ -66,7 +91,7 @@ int main(int argc, char *argv[]) {
 	 * comm			Communicator (handle).
 	 */
 
-	MPI_Bcast (B, SIZE*SIZE, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast (&VECTOR, SIZE, MPI_INT, root, MPI_COMM_WORLD);
 
 	/*
 	 * int MPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm)
@@ -79,15 +104,14 @@ int main(int argc, char *argv[]) {
 	 * comm			Communicator (handle). 
 	 */
 
-	MPI_Scatter (A, SIZE*SIZE/P, MPI_INT, A[from], SIZE*SIZE/P, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Scatter (MATRIX, SIZE * row_per_process, MPI_INT, MATRIX[from], SIZE * row_per_process, MPI_INT, root, MPI_COMM_WORLD);
 	   
 	printf("computing slice %d (from row %d to %d)\n", myrank, from, to-1);
-	for (i=from; i<to; i++) {
-		for (j=0; j<SIZE; j++) {
-			C[i][j]=0;
-			for (k=0; k<SIZE; k++) {
-				C[i][j] += A[i][k]*B[k][j];
-			}
+
+	for (i = from; i < to; i++) {
+		RESULT[i] = 0;
+		for (k = 0; k < SIZE; k++) {
+			RESULT[i] += MATRIX[i][k] * VECTOR[k];
 		}
 	}
 			 
@@ -101,16 +125,16 @@ int main(int argc, char *argv[]) {
 	 * root			Rank of receiving process (integer). 
 	 * comm			Communicator (handle). 
 	 */
-
-	MPI_Gather (C[from], SIZE*SIZE/P, MPI_INT, C, SIZE*SIZE/P, MPI_INT, 0, MPI_COMM_WORLD);
+	long result[row_per_process];
+	MPI_Gather (&result, row_per_process, MPI_LONG, RESULT, row_per_process, MPI_LONG, root, MPI_COMM_WORLD);
 	   
 	if (myrank == 0) {
 		printf("\n\n");
-		print_matrix(A);
+		print_matrix(MATRIX);
 		printf("\n\n\t       * \n");
-		print_matrix(B);
+		print_vector(VECTOR);
 		printf("\n\n\t       = \n");
-		print_matrix(C);
+		print_vector_long(RESULT);
 		printf("\n\n");
 	} 
 	   
