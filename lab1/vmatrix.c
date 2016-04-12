@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define SIZE 8
 
@@ -27,22 +28,12 @@ void print_vector(int v[SIZE]) {
 	printf("|");
 }
 
-void print_vector_long(int v[SIZE]) {
-	int i = 0;
-	printf("\n\t| ");
-	for (i = 0; i < SIZE; i++) {
-		printf("%2d ", v[i]);
-	}
-	printf("|");
-}
-
 void fill_matrix(int m[SIZE][SIZE]) {
 	int n = 1;
 	int i, j;
 	for (i = 0; i < SIZE; i++) {
 		for (j = 0; j < SIZE; j++) {
-			//m[i][j] = n++;
-			m[i][j] = n;
+			m[i][j] = rand() % 10;
 		}
 	}
 }
@@ -54,16 +45,6 @@ void fill_vector(int v[SIZE]) {
 		v[i] = n++;
 	}
 }
-
-int multiple_row_by_vector(int row[SIZE], int v[SIZE]) {
-	int result = 0;
-	int i;
-	for (i = 0; i < SIZE; i++) {
-		result += row[i] * v[i];
-	}
-	return result;
-}
-
 
 int main(int argc, char *argv[]) {
 	int myrank, P, from, to, i, j, k;
@@ -86,6 +67,7 @@ int main(int argc, char *argv[]) {
 	to = (myrank + 1) * row_per_process;
 
 	if (myrank == root) {
+		srand(time(NULL));
 		fill_matrix(MATRIX);
 		fill_vector(VECTOR);
 	}
@@ -99,7 +81,10 @@ int main(int argc, char *argv[]) {
 	printf("computing slice %d (from row %d to %d)\n", myrank, from, to-1);
 
 	for (i = 0; i < row_per_process; i++) {
-		result[i] = multiple_row_by_vector(rows[i], VECTOR);
+		result[i] = 0;
+		for (j = 0; j < SIZE; j++) {
+			result[i] += rows[i][j] * VECTOR[j];
+		}
 	}
 			 
 	MPI_Gather (result, row_per_process, MPI_INT, RESULT, row_per_process, MPI_INT, root, MPI_COMM_WORLD);
@@ -110,7 +95,7 @@ int main(int argc, char *argv[]) {
 		printf("\n\n\t       * \n");
 		print_vector(VECTOR);
 		printf("\n\n\t       = \n");
-		print_vector_long(RESULT);
+		print_vector(RESULT);
 		printf("\n\n");
 	} 
 	   
